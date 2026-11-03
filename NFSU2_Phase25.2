@@ -1,0 +1,32 @@
+name: NFSU2 iOS Phase 2.5 Smoke
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'main.m'
+      - 'Info.plist'
+      - '.github/workflows/ios-smoke.yml'
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile arm64 iPhoneOS app (unsigned)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          mkdir -p Payload/NFSU2Smoke.app
+          xcrun --sdk iphoneos clang -arch arm64 -isysroot "$SDK" \
+            -miphoneos-version-min=16.0 -fobjc-arc \
+            -framework UIKit -framework Foundation -framework Metal \
+            main.m -o Payload/NFSU2Smoke.app/NFSU2Smoke
+          cp Info.plist Payload/NFSU2Smoke.app/Info.plist
+          plutil -lint Payload/NFSU2Smoke.app/Info.plist
+          /usr/bin/zip -qr NFSU2_Phase25_unsigned.ipa Payload
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: NFSU2_Phase25_unsigned
+          path: NFSU2_Phase25_unsigned.ipa
+          if-no-files-found: error
